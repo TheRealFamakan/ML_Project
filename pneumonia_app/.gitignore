@@ -1,0 +1,7 @@
+__pycache__/
+*.h5
+!best_vgg16_model.h5
+uploads/
+.env
+.DS_Store
+venv/

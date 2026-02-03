@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicon: Lungs Icon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🫁</text></svg>">
+    <title>DeepPneumonia | Clinical Suite</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Charts & PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <!-- Login Overlay -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-box glass">
+            <div class="login-header">
+                <i class="fa-solid fa-hospital-user"></i>
+                <h2>Authentification</h2>
+                <p>DeepPneumonia Clinical Access</p>
+            </div>
+            <form id="loginForm">
+                <div class="input-group">
+                    <i class="fa-solid fa-envelope"></i>
+                    <input type="email" placeholder="Email (ex: camara.famakan@admin.com)" required>
+                </div>
+                <div class="input-group">
+                    <i class="fa-solid fa-key"></i>
+                    <input type="password" placeholder="Mot de passe" required>
+                </div>
+                <button type="submit" class="btn-login">
+                    Accéder au Terminal <i class="fa-solid fa-fingerprint"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Profile Edit Modal -->
+    <div id="profileModal" class="modal-overlay hidden">
+        <div class="modal-box glass">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-id-card-clip"></i> Éditer le Profil Praticien</h3>
+                <button class="close-modal" id="closeProfileBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="profile-preview">
+                    <img src="" id="editAvatarPreview" class="avatar-large">
+                    <button type="button" class="btn-secondary" onclick="document.getElementById('avatarUploadInput').click()">
+                        <i class="fa-solid fa-camera"></i> Changer
+                    </button>
+                    <input type="file" id="avatarUploadInput" hidden accept="image/*">
+                </div>
+                <form id="profileForm">
+                    <div class="input-group">
+                        <label>Nom complet</label>
+                        <input type="text" id="editNameInput" placeholder="Dr. ..." required>
+                    </div>
+                    <div class="input-group">
+                        <label>Spécialité / Rôle</label>
+                        <input type="text" id="editRoleInput" placeholder="Ex: Radiologue Senior" required>
+                    </div>
+                    <button type="submit" class="btn-primary full-width">Sauvegarder les modifications</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="app-container">
+        <!-- 3. Sidebar Smart -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <i class="fa-solid fa-lungs-virus"></i>
+                <span>DeepPneumonia</span>
+            </div>
+            
+            <div class="mini-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Analyses auj.</span>
+                    <span class="stat-value" id="dailyCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Précision Moy.</span>
+                    <span class="stat-value">87.2%</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#" class="active"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+                <a href="#"><i class="fa-solid fa-users"></i> Membres</a>
+                <a href="#" class="nav-logout"><i class="fa-solid fa-right-from-bracket"></i> Déconnexion</a>
+            </nav>
+
+            <div class="recent-files">
+                <h4>Fichiers Récents</h4>
+                <div id="recentFilesList" class="recent-list">
+                    <!-- Peuplé par JS -->
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <button class="btn-quick" onclick="alert('Export PDF non disponible demo')"><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="search-bar">
+                    <i class="fa-solid fa-search"></i>
+                    <input type="text" placeholder="Rechercher un patient...">
+                </div>
+                <div class="user-profile">
+                    <img src="https://ui-avatars.com/api/?name=User+Med&background=random" alt="User" class="avatar">
+                    <div class="user-info">
+                        <span class="name">Utilisateur</span>
+                        <span class="role">Personnel Médical</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Zone d'Analyse -->
+                <section class="analysis-section card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-microscope"></i> Analyse Radiologique</h2>
+                        
+                        <!-- 5. Réalité Augmentée Toggle -->
+                        <div class="toggle-group" id="arControls" style="opacity: 0.5; pointer-events: none;">
+                            <label class="switch-label">
+                                <span>Mode Segmentation</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="overlayToggle">
+                                    <span class="slider round"></span>
+                                </label>
+                            </label>
+                            <input type="range" id="opacityRange" min="0" max="1" step="0.1" value="0.5" class="range-slider">
+                        </div>
+                    </div>
+
+                    <div class="upload-container" id="dropZone">
+                        <div class="upload-content">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <p>Glissez vos images ou sélectionnez un dossier</p>
+                            <div class="upload-actions">
+                                <button class="btn-primary" onclick="document.getElementById('fileInput').click()">
+                                    <i class="fa-regular fa-images"></i> Fichiers
+                                </button>
+                                <button class="btn-secondary" onclick="document.getElementById('folderInput').click()">
+                                    <i class="fa-regular fa-folder"></i> Dossier
+                                </button>
+                            </div>
+                            <input type="file" id="fileInput" hidden accept="image/*" multiple>
+                            <input type="file" id="folderInput" hidden webkitdirectory directory multiple>
+                        </div>
+                        
+                        <!-- 4. Skeleton & Loader -->
+                        <div class="loader-overlay" id="loader">
+                            <div class="scanner-bar"></div> <!-- Effet Scan Laser -->
+                            <div class="skeleton-box"></div>
+                            <p class="loading-text">Analyse des tissus profonds...</p>
+                        </div>
+
+                        <!-- NEW: Batch Preview Grid -->
+                        <div class="batch-grid" id="batchPreviewArea" style="display: none;"></div>
+
+                        <!-- 2. Magnifying Glass & Image View -->
+                        <div class="image-preview-area" id="imagePreviewArea" style="display: none;">
+                            <div class="img-wrapper">
+                                <img id="uploadedImage" src="" alt="Radio">
+                                <canvas id="overlayCanvas"></canvas>
+                                <div id="magnifierGlass"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="analyzeBtn" class="btn-action" disabled>Lancer Diagnostic</button>
+                </section>
+
+                <!-- 2. Dashboard Resultats & Metadonnées -->
+                <section class="results-panel">
+                    
+                    <!-- NOUVEAU: Batch Report (Masqué par défaut) -->
+                    <div class="batch-card card" id="batchReportCard" style="display: none; border-left: 4px solid var(--primary);">
+                        <h3><i class="fa-solid fa-layer-group"></i> Rapport de Lot</h3>
+                        <div class="batch-stats">
+                            <div class="b-stat">
+                                <span class="b-val" id="batchTotal">0</span>
+                                <span class="b-lbl">Analysés</span>
+                            </div>
+                            <div class="b-stat">
+                                <span class="b-val text-danger" id="batchPneumonia">0</span>
+                                <span class="b-lbl">Risques</span>
+                            </div>
+                            <div class="b-stat">
+                                <span class="b-val text-success" id="batchNormal">0</span>
+                                <span class="b-lbl">Sains</span>
+                            </div>
+                        </div>
+                        <div class="batch-progress">
+                            <div class="p-bar-danger" id="batchBarDanger" style="width: 0%"></div>
+                            <div class="p-bar-success" id="batchBarSuccess" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                     <!-- Résultat IA (Moved to Top) -->
+                     <div class="prediction-card card" id="predictionCard" style="display: none;">
+                        <h3 class="result-title">Diagnostic VGG16</h3>
+                        <div class="score-ring">
+                            <svg viewBox="0 0 36 36" class="circular-chart">
+                                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path class="circle" id="scoreCircle" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <div class="score-text">
+                                <span id="confidenceScore">0%</span>
+                                <small>Confiance</small>
+                            </div>
+                        </div>
+                        <div class="diagnosis-label" id="diagnosisLabel">--</div>
+                        
+                        <!-- Chart Area -->
+                        <div class="chart-container" style="height: 150px; width: 100%; margin-top: 20px;">
+                            <canvas id="probaChart"></canvas>
+                        </div>
+
+                        <button class="btn-primary full-width" onclick="resetAnalysis()" style="margin-top: 15px; background: var(--secondary);">
+                            <i class="fa-solid fa-rotate-right"></i> Nouvelle Analyse
+                        </button>
+                    </div>
+
+                    <!-- Métadonnées -->
+                    <div class="metadata-card card">
+                        <h3>Données Cliniques (EXIF)</h3>
+                        <div class="meta-grid" id="metaGrid">
+                            <div class="meta-item">
+                                <i class="fa-regular fa-calendar"></i>
+                                <div>
+                                    <small>Date d'acquisition</small>
+                                    <span id="metaDate">--</span>
+                                </div>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fa-solid fa-camera"></i>
+                                <div>
+                                    <small>Dispositif</small>
+                                    <span id="metaCamera">--</span>
+                                </div>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fa-solid fa-expand"></i>
+                                <div>
+                                    <small>Résolution</small>
+                                    <span id="metaRes">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timeline -->
+                    <div class="timeline-card card">
+                        <h3>Historique Patient</h3>
+                        <div class="timeline" id="diagnosticTimeline">
+                            <!-- JS Generated -->
+                            <div class="empty-state">Aucun historique récent</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 1. Section Membres (Social Wall) -->
+                <section class="members-section card">
+                    <div class="card-header">
+                        <h3>Équipe Médicale</h3>
+                        <span class="badge-count" id="memberCountBadge">2 en ligne</span>
+                    </div>
+                    <div class="members-grid" id="membersGrid">
+                        <!-- Peuplé par JS -->
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- 4. Toast Container -->
+    <div id="toastContainer"></div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
