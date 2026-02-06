@@ -34,9 +34,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => {
                     loginOverlay.classList.add('hidden');
                     localStorage.setItem('isAuth', 'true'); // Persist login
+                    
+                    // SAVE USER PROFILE BASED ON LOGIN
+                    const newProfile = {
+                        name: data.user,
+                        role: 'Admin / Expert I.A.',
+                        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.user)}&background=random&color=fff`
+                    };
+                    localStorage.setItem('userProfile', JSON.stringify(newProfile));
+                    
                     showToast(`Bienvenue, ${data.user}`, 'success');
-                    // Store fake token if needed
                     sessionStorage.setItem('authToken', data.token);
+
+                    // Reload to update UI everywhere
+                    setTimeout(() => window.location.reload(), 500);
+
                 }, 800);
             } else {
                 // Error

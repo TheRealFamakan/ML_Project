@@ -20,10 +20,20 @@ MODEL_PATH = 'best_vgg16_model.h5'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 
-# Charger le modele au demarrage
-print("Chargement du modele...")
-model = load_model(MODEL_PATH)
-print("Modele charge avec succes")
+# --- Chargement Sécurisé du Modèle ---
+model = None
+try:
+    print(f"Tentative de chargement du modèle depuis: {MODEL_PATH}")
+    if os.path.exists(MODEL_PATH):
+        # Désactiver GPU pour éviter les erreurs de mémoire sur l'espace gratuit
+        os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+        model = load_model(MODEL_PATH)
+        print("✅ MODELE CHARGE AVEC SUCCES")
+    else:
+        print(f"❌ ERREUR: Le fichier {MODEL_PATH} est introuvable !")
+except Exception as e:
+    print(f"❌ ERREUR CRITIQUE lors du chargement du modèle: {e}")
+    # On laisse l'app démarrer pour voir les logs, mais la prédiction échouera.
 
 # --- Authentification ---
 @app.route('/login', methods=['POST'])
@@ -104,6 +114,9 @@ def index():
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    if model is None:
+        return jsonify({'error': 'Erreur Serveur: Le modèle IA n\'est pas chargé. (Voir Logs)'}), 500
+
     if 'files[]' not in request.files:
         return jsonify({'error': 'Aucun fichier fourni'}), 400
     
